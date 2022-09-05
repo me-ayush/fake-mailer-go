@@ -9,13 +9,18 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/template/html"
 	"github.com/joho/godotenv"
 )
 
 func setupRoutes(app *fiber.App) {
 	app.Post("/", createMail)
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).Render("index", fiber.Map{
+			// "Msg": "404 Not Found",
+		})
+	})
 }
 
 func main() {
@@ -29,15 +34,12 @@ func main() {
 		fmt.Println(err)
 	}
 
-	app := fiber.New()
+	engine := html.New(".", ".html")
+	app := fiber.New(fiber.Config{
+		Views: engine,
+	})
 
 	app.Use(logger.New())
-	// app.Use(cache.New())
-
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:3001",
-		AllowHeaders: "Origin, Content-Type, Accept",
-	}))
 
 	setupRoutes(app)
 	log.Fatal(app.Listen(PORT))
@@ -47,16 +49,27 @@ func createMail(c *fiber.Ctx) error {
 	var mail models.Mailer
 
 	if err := c.BodyParser(&mail); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse JSON in login"})
+		// return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse JSON in login"})
+		return c.Status(fiber.StatusOK).Render("index", fiber.Map{
+			"Success": true,
+			"Message": "Cannot Parse JSON",
+		})
 	}
 
 	if mail.Sender == "" || mail.To == nil {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{"error": "Please Fill All Fields"})
+		// return c.Status(fiber.StatusOK).JSON(fiber.Map{"error": "Please Fill All Fields"})
+		return c.Status(fiber.StatusOK).Render("index", fiber.Map{
+			"Success": true,
+			"Message": "Please Fill All Fields",
+		})
 	}
 
 	msg := sendMail(mail)
 
-	return c.Status(fiber.StatusOK).JSON(msg)
+	return c.Status(fiber.StatusOK).Render("index", fiber.Map{
+		"Success": true,
+		"Message": msg,
+	})
 }
 
 func sendMail(request models.Mailer) string {
